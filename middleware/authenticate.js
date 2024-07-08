@@ -9,23 +9,19 @@ const authenticate = async (req, res) => {
     }
   
     try {
-      // Verify the token using the secret key
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
   
       // Extract the user ID from the token's payload
       const userId = decoded.userId;
   
-      // Retrieve the user from the database using the user ID
       const user = await User.findById(userId);
   
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
   
-      // Attach the user object to the request object for further processing
       req.user = user;
   
-      // Proceed to the next middleware or route handler
       next();
     } catch (error) {
       return res.status(401).json({ message: "Invalid or expired token" });

@@ -30,4 +30,8 @@ router.get(
 router.get('/user/download/:imageUrl', authenticate, chatController.downloadImg);
 router.put('/user/deleteforme/:messageId', authenticate, chatController.deleteForMe);
 router.post('/user/deleteforeveryone/:messageId/:chatId', authenticate, chatController.deleteForEveryone);
+router.post('/user/api/creategroup', authenticate, chatController.createGroupChat);
+router.put('/user/api/renamegroup', authenticate, chatController.renameGroup);
+router.put('/user/api/groupadd', authenticate, chatController.addToGroup);
+router.put('/user/api/groupremove', authenticate, chatController.removeFromGroup);
 module.exports = router;

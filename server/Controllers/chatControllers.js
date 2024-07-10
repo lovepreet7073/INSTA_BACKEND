@@ -8,6 +8,24 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+
+
+const app = express();
+const cors = require("cors");
+const http = require("http");
+const server = http.createServer(app);
+const io = require("socket.io")(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true,
+    pingTimeout: 60000,
+  },
+});
+
+const dotenv = require("dotenv");
+const port = 5000;
+
 exports.chatUsers = async (req, res) => {
   const keyword = req.query.search
     ? {
@@ -223,13 +241,13 @@ exports.createGroupChat = async (req, res) => {
       chatName: req.body.chatName,
       users: users,
       isGroupChat: true,
-      groupAdmin: req.user,
+      groupAdmin: req.user._id,
     });
 
     const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
       .populate("users", "-password")
-      .populate("groupAdmin", "-password");
-
+      // .populate("groupAdmin", "-password");
+      io.emit('newGroupCreated', fullGroupChat);
     res.status(200).json(fullGroupChat);
   } catch (error) {
     res.status(400);
@@ -249,7 +267,7 @@ exports.renameGroup = async (req, res) => {
   }
   )
     .populate("users", "-password")
-    .populate("groupAdmin", "-password");
+    // .populate("groupAdmin", "-password");
   if (!updatedChat) {
     res.status(404);
     throw new Error("Chat Not Found!")
@@ -287,7 +305,7 @@ exports.removeFromGroup = async (req, res) => {
     { new: true })
 
     .populate("users", "-password")
-    .populate("groupAdmin", "-password");
+    // .populate("groupAdmin", "-password");
   if (!removed) {
     res.status(404);
     throw new Error("Chat Not Found!")

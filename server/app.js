@@ -11,6 +11,7 @@ const io = require("socket.io")(server, {
     pingTimeout: 60000,
   },
 });
+
 const dotenv = require("dotenv");
 const path = require("path");
 const port = 5000;
@@ -60,7 +61,15 @@ io.on("connection", (socket) => {
     });
     console.log(newMessageReceived.content, 'qwertyui');
   });
+  socket.on('create group', (groupId, groupUsers) => {
+    console.log('GROUP UPDATE:-', groupId,groupUsers);
+    groupUsers.forEach((user) => {
+      // if (user._id == newMessageReceived.sender._id) return;
+      socket.in(user._id).emit("group created");
+    });
+    // io.emit('group created', { groupId, groupUsers });
 
+  });
   socket.on("addUser", (userId) => {
     addUser(userId, socket.id);
     console.log(userId, socket.id);
@@ -78,11 +87,16 @@ io.on("connection", (socket) => {
     console.log('Received last message update:', lastMsgData);
     io.to(chatId).emit('last message', lastMsgData); // Broadcast to all clients in the chat room
   });
+  
   socket.on("disconnect", () => {
-    console.log("user disconnntedf!");
+    console.log("user disconnnted!");
     removeUser(socket.id);
     io.emit("getUsers", users);
   });
+
+  
+
+
 
 });
 

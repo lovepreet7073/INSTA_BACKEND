@@ -11,7 +11,6 @@ const fs = require('fs');
 
 
 const app = express();
-const cors = require("cors");
 const http = require("http");
 const server = http.createServer(app);
 const io = require("socket.io")(server, {
@@ -246,8 +245,8 @@ exports.createGroupChat = async (req, res) => {
 
     const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
       .populate("users", "-password")
-      // .populate("groupAdmin", "-password");
-      io.emit('newGroupCreated', fullGroupChat);
+    // .populate("groupAdmin", "-password");
+    io.emit('newGroupCreated', fullGroupChat);
     res.status(200).json(fullGroupChat);
   } catch (error) {
     res.status(400);
@@ -267,7 +266,7 @@ exports.renameGroup = async (req, res) => {
   }
   )
     .populate("users", "-password")
-    // .populate("groupAdmin", "-password");
+  // .populate("groupAdmin", "-password");
   if (!updatedChat) {
     res.status(404);
     throw new Error("Chat Not Found!")
@@ -305,7 +304,7 @@ exports.removeFromGroup = async (req, res) => {
     { new: true })
 
     .populate("users", "-password")
-    // .populate("groupAdmin", "-password");
+  // .populate("groupAdmin", "-password");
   if (!removed) {
     res.status(404);
     throw new Error("Chat Not Found!")
@@ -314,3 +313,35 @@ exports.removeFromGroup = async (req, res) => {
   }
 }
 
+exports.userRemoveFromGroup = async (req, res) => {
+  const { userId } = req.params;
+  const { chatId } = req.body;
+  const requesterId = req.user._id;
+
+  try {
+    const chat = await Chat.findById(chatId).populate({
+      path: 'users',
+      select: 'name profileImage'
+    })
+    
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+
+    if (chat.groupAdmin.toString() !== requesterId.toString()) {
+      return res.status(403).json({ message: 'Only group admin can remove users' });
+    }
+
+    const userToRemove = chat.users.find(user => user._id.toString() === userId.toString());
+    if (!userToRemove) {
+      return res.status(404).json({ message: 'User not found in the chat' });
+    }
+
+    chat.users.pull(userToRemove._id);
+    await chat.save();
+
+    res.status(200).json({ message: 'User removed from the group', chat });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

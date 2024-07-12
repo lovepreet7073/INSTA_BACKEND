@@ -37,6 +37,7 @@ const removeUser = (socketId) => {
   users = users.filter((user) => user.socketId !== socketId);
 };
 
+
 io.on("connection", (socket) => {
   console.log("A user connected (socket.io)", socket.id);
 
@@ -61,31 +62,54 @@ io.on("connection", (socket) => {
     });
     console.log(newMessageReceived.content, 'qwertyui');
   });
+
   socket.on('create group', (groupId, groupUsers) => {
-    console.log('GROUP UPDATE:-', groupId,groupUsers);
     groupUsers.forEach((user) => {
-      // if (user._id == newMessageReceived.sender._id) return;
       socket.in(user._id).emit("group created");
     });
-    // io.emit('group created', { groupId, groupUsers });
+  });
+
+  
+  socket.on('leaveGroup', (chat) => {
+    console.log('leaveGroup',chat);
+    chat.users.forEach((user) => {
+      socket.in(user._id).emit("userLeftGroup",chat);
+    });
 
   });
-  socket.on("addUser", (userId) => {
+ 
+  socket.on('removeuserbyadmin', async (chat, userId) => {
+    console.log('removeuser', chat);
+    chat.users.forEach((user) => {
+      console.log(user, 'user');
+      socket.in(user._id).emit("userRemoved", { chat, removedUserId: userId });
+    });
+    socket.in(userId).emit("userRemoved", { chat, removedUserId: userId });
+  });
+
+  
+  socket.on('updateGroup', (groupChat) => { 
+    console.log(groupChat,'test')
+    groupChat.users.forEach((user) => {
+      socket.in(user._id).emit("UpdateGroup-name",groupChat);
+    });
+});
+
+socket.on("addUser", (userId) => {
     addUser(userId, socket.id);
     console.log(userId, socket.id);
     io.emit("getUsers", users);
   });
+  
   socket.on('deleteMessage', (messageId) => {
     console.log(messageId,"messageDeleted");
     socket.broadcast.emit('messageDeleted', messageId);
   });
   
-  
-
   socket.on('last message', (lastMsgData) => {
     const chatId = lastMsgData.chatId;
     console.log('Received last message update:', lastMsgData);
-    io.to(chatId).emit('last message', lastMsgData); // Broadcast to all clients in the chat room
+    io.to(chatId).emit('last message', lastMsgData); 
   });
   
   socket.on("disconnect", () => {
@@ -93,11 +117,6 @@ io.on("connection", (socket) => {
     removeUser(socket.id);
     io.emit("getUsers", users);
   });
-
-  
-
-
-
 });
 
 require("./db/connect");

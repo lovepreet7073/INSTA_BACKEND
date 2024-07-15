@@ -1,29 +1,9 @@
-const express = require("express");
-const router = express.Router();
 const User = require("../models/userSchema");
 const Chat = require("../models/chatSchema");
-const authenticate = require("../middleware/authenticate");
 const Message = require("../models/MessageSchema");
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-
-
-const app = express();
-const http = require("http");
-const server = http.createServer(app);
-const io = require("socket.io")(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
-    credentials: true,
-    pingTimeout: 60000,
-  },
-});
-
-const dotenv = require("dotenv");
-const port = 5000;
 
 exports.chatUsers = async (req, res) => {
   const keyword = req.query.search
@@ -144,6 +124,8 @@ exports.sendMessage = async (req, res) => {
     res.status(400).send(error.message);
   }
 };
+
+
 exports.downloadImg = async (req, res) => {
   try {
     const { imageUrl } = req.params;
@@ -266,7 +248,6 @@ exports.renameGroup = async (req, res) => {
   }
   )
     .populate("users", "-password")
-  // .populate("groupAdmin", "-password");
   if (!updatedChat) {
     res.status(404);
     throw new Error("Chat Not Found!")
@@ -304,7 +285,6 @@ exports.removeFromGroup = async (req, res) => {
     { new: true })
 
     .populate("users", "-password")
-  // .populate("groupAdmin", "-password");
   if (!removed) {
     res.status(404);
     throw new Error("Chat Not Found!")

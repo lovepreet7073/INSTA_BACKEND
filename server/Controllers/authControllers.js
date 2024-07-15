@@ -5,6 +5,7 @@ const secretKey = process.env.SECRET_KEY;
 const sendMail = require("../utils/mailUtil");
 
 const Token = require("../models/tokenschema");
+
 exports.register = async (req, res) => {
   const { name, email, mobile, password, confirmPassword } = req.body;
 
@@ -118,13 +119,11 @@ exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ error: "Invalid email or password" });
     }
 
-    // Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ error: "Invalid email or password" });

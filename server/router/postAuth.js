@@ -1,12 +1,12 @@
 const express = require("express");
 const postrouter = express.Router();
 require("../db/connect");
-
 const authenticate = require("../middleware/authenticate");
 const postController = require("../Controllers/postControllers");
-//create post logic
-const multer = require("multer");
 
+//create post logic
+
+const multer = require("multer");
 const createPostStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "./images");

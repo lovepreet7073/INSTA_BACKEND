@@ -13,7 +13,6 @@ const userSchema = new mongoose.Schema({
   },
   mobile: {
     type: Number,
-    // required: true,
   },
   password: {
     type: String,
@@ -21,7 +20,6 @@ const userSchema = new mongoose.Schema({
   },
   confirmPassword: {
     type: String,
-    // required: true,
   },
   profileImage: {
     type: String,

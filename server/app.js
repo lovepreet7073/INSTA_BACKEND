@@ -11,6 +11,7 @@ const io = require("socket.io")(server, {
     pingTimeout: 60000,
   },
 });
+
 const dotenv = require("dotenv");
 const path = require("path");
 const port = 5000;
@@ -19,7 +20,7 @@ dotenv.config({ path: "./.env" });
 
 app.use(cors({
   origin: 'http://localhost:3000',
-  methods: ['GET', 'POST', 'PUT'],
+  methods: ['GET', 'POST', 'PUT','DELETE'],
   credentials: true
 }));
 
@@ -35,6 +36,7 @@ const addUser = (userId, socketId) => {
 const removeUser = (socketId) => {
   users = users.filter((user) => user.socketId !== socketId);
 };
+
 
 io.on("connection", (socket) => {
   console.log("A user connected (socket.io)", socket.id);
@@ -61,29 +63,60 @@ io.on("connection", (socket) => {
     console.log(newMessageReceived.content, 'qwertyui');
   });
 
-  socket.on("addUser", (userId) => {
+  socket.on('create group', (groupId, groupUsers) => {
+    groupUsers.forEach((user) => {
+      socket.in(user._id).emit("group created");
+    });
+  });
+
+  
+  socket.on('leaveGroup', (chat) => {
+    console.log('leaveGroup',chat);
+    chat.users.forEach((user) => {
+      socket.in(user._id).emit("userLeftGroup",chat);
+    });
+
+  });
+ 
+  socket.on('removeuserbyadmin', async (chat, userId) => {
+    console.log('removeuser', chat);
+    chat.users.forEach((user) => {
+      console.log(user, 'user');
+      socket.in(user._id).emit("userRemoved", { chat, removedUserId: userId });
+    });
+    socket.in(userId).emit("userRemoved", { chat, removedUserId: userId });
+  });
+
+  
+  socket.on('updateGroup', (groupChat) => { 
+    console.log(groupChat,'test')
+    groupChat.users.forEach((user) => {
+      socket.in(user._id).emit("UpdateGroup-name",groupChat);
+    });
+});
+
+socket.on("addUser", (userId) => {
     addUser(userId, socket.id);
     console.log(userId, socket.id);
     io.emit("getUsers", users);
   });
+  
   socket.on('deleteMessage', (messageId) => {
     console.log(messageId,"messageDeleted");
     socket.broadcast.emit('messageDeleted', messageId);
   });
   
-  
-
   socket.on('last message', (lastMsgData) => {
     const chatId = lastMsgData.chatId;
     console.log('Received last message update:', lastMsgData);
-    io.to(chatId).emit('last message', lastMsgData); // Broadcast to all clients in the chat room
+    io.to(chatId).emit('last message', lastMsgData); 
   });
+  
   socket.on("disconnect", () => {
-    console.log("user disconnntedf!");
+    console.log("user disconnnted!");
     removeUser(socket.id);
     io.emit("getUsers", users);
   });
-
 });
 
 require("./db/connect");

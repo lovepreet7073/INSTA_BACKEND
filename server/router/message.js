@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 
-router.post("/api/user/sendmessage",  upload.single("image"), authenticate, chatController.sendMessage);
+router.post("/api/user/sendmessage", upload.single("image"), authenticate, chatController.sendMessage);
 
 router.get(
   "/api/user/allmessages/:chatId",
@@ -30,4 +30,9 @@ router.get(
 router.get('/user/download/:imageUrl', authenticate, chatController.downloadImg);
 router.put('/user/deleteforme/:messageId', authenticate, chatController.deleteForMe);
 router.post('/user/deleteforeveryone/:messageId/:chatId', authenticate, chatController.deleteForEveryone);
+router.post('/user/api/creategroup', authenticate, chatController.createGroupChat);
+router.put('/user/api/renamegroup', authenticate, chatController.renameGroup);
+router.put('/user/api/groupadd', authenticate, chatController.addToGroup);
+router.put('/user/api/groupremove', authenticate, chatController.removeFromGroup);
+router.put('/user/api/userremove/:userId', authenticate, chatController.userRemoveFromGroup);
 module.exports = router;

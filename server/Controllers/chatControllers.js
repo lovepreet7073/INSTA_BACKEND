@@ -1,12 +1,9 @@
-const express = require("express");
-const router = express.Router();
 const User = require("../models/userSchema");
 const Chat = require("../models/chatSchema");
-const authenticate = require("../middleware/authenticate");
 const Message = require("../models/MessageSchema");
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+
 
 exports.chatUsers = async (req, res) => {
   const keyword = req.query.search
@@ -75,11 +72,11 @@ exports.chatData = async (req, res) => {
 
 exports.allMessages = async (req, res) => {
   try {
-    const userId = req.user._id; 
+    const userId = req.user._id;
 
     const messages = await Message.find({
       chat: req.params.chatId,
-      deletedFor: { $ne: userId } 
+      deletedFor: { $ne: userId }
     })
       .populate("sender", "name profileImage email")
       .populate("chat");
@@ -127,12 +124,14 @@ exports.sendMessage = async (req, res) => {
     res.status(400).send(error.message);
   }
 };
+
+
 exports.downloadImg = async (req, res) => {
   try {
     const { imageUrl } = req.params;
     const decodedImageUrl = decodeURIComponent(imageUrl);
 
-    const imagePath = path.join(__dirname, '..',  decodedImageUrl);
+    const imagePath = path.join(__dirname, '..', decodedImageUrl);
 
     if (!fs.existsSync(imagePath)) {
       return res.status(404).json({ error: 'Image file not found on server' });
@@ -192,12 +191,137 @@ exports.deleteForEveryone = async (req, res) => {
       })
         .populate("sender", "name profileImage email")
         .populate("chat");
-      res.status(200).json({ message: 'Messages updated successfully', allMessage:messages });
+      res.status(200).json({ message: 'Messages updated successfully', allMessage: messages });
     } else {
       res.status(404).json({ error: 'Messages not found' });
     }
   } catch (error) {
     console.error('Error updating messages:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+};
+
+
+exports.createGroupChat = async (req, res) => {
+  if (!req.body.users || !req.body.chatName) {
+    return res.status(400).send({ message: "Please Fill all the feilds" });
+  }
+
+  var users = JSON.parse(req.body.users);
+
+  if (users.length < 2) {
+    return res
+      .status(400)
+      .send("More than 2 users are required to form a group chat");
+  }
+
+  users.push(req.user);
+
+  try {
+    const groupChat = await Chat.create({
+      chatName: req.body.chatName,
+      users: users,
+      isGroupChat: true,
+      groupAdmin: req.user._id,
+    });
+
+    const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
+      .populate("users", "-password")
+    // .populate("groupAdmin", "-password");
+    io.emit('newGroupCreated', fullGroupChat);
+    res.status(200).json(fullGroupChat);
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+};
+
+
+exports.renameGroup = async (req, res) => {
+  const { chatId, chatName } = req.body;
+  const updatedChat = await Chat.findByIdAndUpdate(
+    chatId,
+    {
+      chatName
+    }, {
+    new: true,
+  }
+  )
+    .populate("users", "-password")
+  if (!updatedChat) {
+    res.status(404);
+    throw new Error("Chat Not Found!")
+  } else {
+    res.json(updatedChat);
+  }
+}
+
+
+exports.addToGroup = async (req, res) => {
+  const { chatId, userId } = req.body;
+  const added = await Chat.findByIdAndUpdate(chatId, {
+    $push: { users: userId }
+
+  },
+    { new: true })
+
+    .populate("users", "-password")
+    .populate("groupAdmin", "-password");
+  if (!added) {
+    res.status(404);
+    throw new Error("Chat Not Found!")
+  } else {
+    res.json(added);
+  }
+}
+
+
+exports.removeFromGroup = async (req, res) => {
+  const { chatId, userId } = req.body;
+  const removed = await Chat.findByIdAndUpdate(chatId, {
+    $pull: { users: userId }
+
+  },
+    { new: true })
+
+    .populate("users", "-password")
+  if (!removed) {
+    res.status(404);
+    throw new Error("Chat Not Found!")
+  } else {
+    res.json(removed);
+  }
+}
+
+exports.userRemoveFromGroup = async (req, res) => {
+  const { userId } = req.params;
+  const { chatId } = req.body;
+  const requesterId = req.user._id;
+
+  try {
+    const chat = await Chat.findById(chatId).populate({
+      path: 'users',
+      select: 'name profileImage'
+    })
+    
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+
+    if (chat.groupAdmin.toString() !== requesterId.toString()) {
+      return res.status(403).json({ message: 'Only group admin can remove users' });
+    }
+
+    const userToRemove = chat.users.find(user => user._id.toString() === userId.toString());
+    if (!userToRemove) {
+      return res.status(404).json({ message: 'User not found in the chat' });
+    }
+
+    chat.users.pull(userToRemove._id);
+    await chat.save();
+
+    res.status(200).json({ message: 'User removed from the group', chat });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

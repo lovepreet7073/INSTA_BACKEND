@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const secretKey = process.env.SECRET_KEY;
 const sendMail = require("../utils/mailUtil");
-
+const {generateToken04} = require("../utils/tokenGenerator")
 const Token = require("../models/tokenschema");
 
 exports.register = async (req, res) => {
@@ -70,7 +70,7 @@ exports.verifyAccount = async (req, res) => {
 
     // Remove the token from the database
     await Token.deleteOne({ _id: tokenDoc._id });
-
+console.log(user,"user")
     res.status(200).send({ message: "Email verified successfully" });
   } catch (error) {
     console.error("Verification error:", error);
@@ -340,6 +340,7 @@ exports.updatePassword = async (req, res) => {
 
     res.status(200).json({ message: "Password changed successfully" });
   } catch (error) {
+
     console.error("Error changing password:", error);
     res.status(500).json({ error: "Server error" });
   }
@@ -449,3 +450,22 @@ exports.googleLogin = async (req, res) => {
     res.status(400).json({ error: "Email is not verified" });
   }
 };
+
+
+exports.generateToken = async(req,res,next)=>{
+try {
+  const appId = parseInt(process.env.APP_ID);
+  const serverSecret = process.env.SECRET_SERVER_ID;
+  const userId = req.params.userId;
+  const effectiveTime = 3600;
+  const payload = "";
+  if(appId && serverSecret && userId){
+    const token = generateToken04(appId,userId,serverSecret,effectiveTime,payload);
+    res.status(200).json({token});
+  } else {
+    return res.status(400).send("User id,app id and server secret is required!");
+  }
+} catch (error) {
+  next(error);
+}
+}

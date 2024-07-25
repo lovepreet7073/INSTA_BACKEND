@@ -57,3 +57,4 @@ module.exports = router;
 router.post("/googleLogin",authcontroller.googleLogin)
 router.get("/verifyaccount/:id/:token",authcontroller.verifyAccount)
 router.post("/resend-confirmation",authcontroller.resendConfirmation)
+router.get("/user/api/generate-token/:userId",authcontroller.generateToken)

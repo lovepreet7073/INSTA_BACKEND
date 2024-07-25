@@ -228,10 +228,10 @@ exports.createGroupChat = async (req, res) => {
     const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
       .populate("users", "-password")
     // .populate("groupAdmin", "-password");
-    io.emit('newGroupCreated', fullGroupChat);
+    // io.emit('newGroupCreated', fullGroupChat);
     res.status(200).json(fullGroupChat);
   } catch (error) {
-    res.status(400);
+    res.status(400);       
     throw new Error(error.message);
   }
 };

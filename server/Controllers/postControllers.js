@@ -142,24 +142,34 @@ exports.updatePost = async (req, res) => {
 exports.Allposts = async (req, res) => {
   try {
     const { userId } = req.params;
+    const { page = 1, limit = 10 } = req.query; // Default to page 1 and limit 10 if not provided
 
     const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     const followingUserIds = user.following;
 
     const posts = await Post.find({
       userId: { $in: followingUserIds },
-    }).populate("userId");
+    })
+      .skip((page - 1) * Number(limit)) // Ensure limit is a number
+      .limit(Number(limit)) // Ensure limit is a number
+      .populate("userId");
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.json(posts);
+    const totalPosts = await Post.countDocuments({
+      userId: { $in: followingUserIds },
+    });
+
+    const hasMore = totalPosts > page * Number(limit);
+    console.log("totalPosts:",totalPosts,"hasMore:",hasMore,"page:",page,"posts:",posts.length)
+    res.json({ posts, hasMore ,page});
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error while fetching posts" });
   }
-}
+};
 
 exports.likePost = async (req, res) => {
   try {

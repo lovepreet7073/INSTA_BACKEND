@@ -23,7 +23,7 @@ exports.register = async (req, res) => {
     const token = await new Token({
       userId: user._id,
       token: jwt.sign({ _id: user._id }, secretKey, {
-        expiresIn: "1m",
+        expiresIn: "5m",
       }),
     }).save();
 
@@ -55,13 +55,13 @@ exports.verifyAccount = async (req, res) => {
       userId: user._id,
       token: req.params.token,
     });
-
     if (!tokenDoc) return res.status(400).send({ message: "Invalid Link" });
 
     const decoded = jwt.verify(req.params.token, secretKey);
-    if (decoded.exp <= Date.now() / 1000) {
+    console.log(tokenDoc.token,decoded.exp,Date.now()/1000,'testt');
+    if (decoded.exp <= Math.floor(Date.now() / 1000)) {
       // Token is expired
-      await Token.deleteOne({ _id: tokenDoc._id }); // Clean up expired token
+      await Token.deleteOne({ _id: tokenDoc._id });
       return res.status(401).send({ message: "Token has expired. Please request a new verification link." });
     }
 
@@ -69,8 +69,7 @@ exports.verifyAccount = async (req, res) => {
     await user.save();
 
     // Remove the token from the database
-    await Token.deleteOne({ _id: tokenDoc._id });
-console.log(user,"user")
+    // await Token.deleteOne({ _id: tokenDoc._id });
     res.status(200).send({ message: "Email verified successfully" });
   } catch (error) {
     console.error("Verification error:", error);
@@ -91,7 +90,7 @@ exports.resendConfirmation = async (req, res) => {
       return res.status(400).json({ message: "Email already confirmed." });
     }
 
-    const newToken = jwt.sign({ _id: user._id }, secretKey, { expiresIn: "1m" });
+    const newToken = jwt.sign({ _id: user._id }, secretKey, { expiresIn: "5m" });
 
     await Token.findOneAndUpdate(
       { userId: user._id },

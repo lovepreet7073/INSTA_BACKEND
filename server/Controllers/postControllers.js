@@ -3,14 +3,14 @@ const User = require("../models/userSchema");
 const Post = require("../models/PostSchema");
 
 exports.createPost = async (req, res) => {
-  const { title, description } = req.body;
+  const { title } = req.body;
   const userId = req.params.userId;
 
-  if (!title || !description) {
-    return res
-      .status(400)
-      .json({ error: "Title and description are required fields" });
-  }
+  // if (!image) {
+  //   return res
+  //     .status(400)
+  //     .json({ error: "Image is required!" });
+  // }
 
   try {
     let imageUrl;
@@ -20,7 +20,7 @@ exports.createPost = async (req, res) => {
 
     const newPostData = {
       title,
-      description,
+    
       image: {
         filename: req.file.filename,
         originalname: req.file.originalname,
@@ -107,11 +107,11 @@ exports.updatePost = async (req, res) => {
   const postId = req.params.postId;
   const image = req.file;
 
-  if (!title || !description) {
-    return res
-      .status(400)
-      .json({ error: "Title and description are required fields" });
-  }
+  // if (!title || !description) {
+  //   return res
+  //     .status(400)
+  //     .json({ error: "Title and description are required fields" });
+  // }
 
   try {
     const post = await Post.findById(postId);
@@ -121,7 +121,7 @@ exports.updatePost = async (req, res) => {
 
     // Update title and description
     post.title = title;
-    post.description = description;
+    // post.description = description;
 
     if (image) {
       post.image = {
@@ -217,7 +217,7 @@ exports.User = async (req, res) => {
       res.status(404).json({ message: "" });
     }
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    console.error("Error fetching user data:", error);w
     res
       .status(500)
       .json({ message: "An error occurred while fetching user data" });

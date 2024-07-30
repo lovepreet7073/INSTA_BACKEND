@@ -39,17 +39,20 @@ const removeUser = (socketId) => {
 
 
 io.on("connection", (socket) => {
-  console.log("A user connected (socket.io)", socket.id);
 
   socket.on("setup", (userData) => {
     socket.join(userData._id);
-    console.log(`User with ID ${userData._id} setup`);
-    socket.emit("connected");
+    console.log('setup successfully')
+    // socket.emit("connected");
+  });
+
+  socket.on("join", (userId) => {
+    socket.join(userId);
+    console.log(`User with ID ${userId} joined room ${userId}`);
   });
 
   socket.on("join chat", (room) => {
     socket.join(room);
-    console.log(`User joined room ${room}`);
   });
   socket.on("new message", (newMessageReceived) => {
     var chat = newMessageReceived.chat;
@@ -58,9 +61,10 @@ io.on("connection", (socket) => {
     }
     chat.users.forEach((user) => {
       if (user._id == newMessageReceived.sender._id) return;
+ 
       socket.in(user._id).emit("message received", newMessageReceived);
+      console.log(newMessageReceived.content)
     });
-    console.log(newMessageReceived.content, 'qwertyui');
   });
 
   socket.on('create group', (groupId, groupUsers) => {
@@ -71,7 +75,6 @@ io.on("connection", (socket) => {
 
   
   socket.on('leaveGroup', (chat) => {
-    console.log('leaveGroup',chat);
     chat.users.forEach((user) => {
       socket.in(user._id).emit("userLeftGroup",chat);
     });
@@ -79,9 +82,8 @@ io.on("connection", (socket) => {
   });
  
   socket.on('removeuserbyadmin', async (chat, userId) => {
-    console.log('removeuser', chat);
+
     chat.users.forEach((user) => {
-      console.log(user, 'user');
       socket.in(user._id).emit("userRemoved", { chat, removedUserId: userId });
     });
     socket.in(userId).emit("userRemoved", { chat, removedUserId: userId });
@@ -89,7 +91,6 @@ io.on("connection", (socket) => {
 
   
   socket.on('updateGroup', (groupChat) => { 
-    console.log(groupChat,'test')
     groupChat.users.forEach((user) => {
       socket.in(user._id).emit("UpdateGroup-name",groupChat);
     });
@@ -97,26 +98,27 @@ io.on("connection", (socket) => {
 
 socket.on("addUser", (userId) => {
     addUser(userId, socket.id);
-    console.log(userId, socket.id);
     io.emit("getUsers", users);
-  });
+  }); 
   
   socket.on('deleteMessage', (messageId) => {
-    console.log(messageId,"messageDeleted");
     socket.broadcast.emit('messageDeleted', messageId);
   });
   
   socket.on('last message', (lastMsgData) => {
     const chatId = lastMsgData.chatId;
-    console.log('Received last message update:', lastMsgData);
     io.to(chatId).emit('last message', lastMsgData); 
   });
-  
+  socket.on('startVideoCall', ({ to, roomID, from }) => {
+    console.log(`Video call started from ${from.id} to ${to}`);
+    io.to(to).emit('incomingVideoCall', { roomID, from });
+});
   socket.on("disconnect", () => {
     console.log("user disconnnted!");
     removeUser(socket.id);
     io.emit("getUsers", users);
   });
+
 });
 
 require("./db/connect");

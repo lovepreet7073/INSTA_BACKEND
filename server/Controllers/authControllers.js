@@ -26,7 +26,7 @@ exports.register = async (req, res) => {
         expiresIn: "5m",
       }),
     }).save();
-
+console.log(token,token)
     const mailHtml = `  
       <div style="font-family: Arial, sans-serif; text-align: center;">
         <h2>Verify Email</h2>
@@ -404,10 +404,6 @@ exports.resetPassword = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
-//api for google login
-
-
 
 exports.googleLogin = async (req, res) => {
   const { email_verified, email, name, clientId, picture } = req.body;

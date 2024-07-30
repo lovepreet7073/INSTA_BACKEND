@@ -68,8 +68,6 @@ exports.chatData = async (req, res) => {
   }
 }
 
-
-
 exports.allMessages = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -86,9 +84,6 @@ exports.allMessages = async (req, res) => {
     res.json({ message: error.message });
   }
 };
-
-
-
 
 exports.sendMessage = async (req, res) => {
   const { content, chatId } = req.body;
@@ -167,8 +162,6 @@ exports.deleteForMe = async (req, res) => {
   }
 }
 
-
-
 exports.deleteForEveryone = async (req, res) => {
   try {
     const { messageId } = req.params;
@@ -200,7 +193,6 @@ exports.deleteForEveryone = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
-
 
 exports.createGroupChat = async (req, res) => {
   if (!req.body.users || !req.body.chatName) {

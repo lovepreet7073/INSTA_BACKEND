@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
   },
   profileImage: {
     type: String,
-    default: 'imageProfile.jpg'
+    default: 'proImg.png'
   },
   verified: {
     type: Boolean, default: false

@@ -5,13 +5,6 @@ const Post = require("../models/PostSchema");
 exports.createPost = async (req, res) => {
   const { title } = req.body;
   const userId = req.params.userId;
-
-  // if (!image) {
-  //   return res
-  //     .status(400)
-  //     .json({ error: "Image is required!" });
-  // }
-
   try {
     let imageUrl;
     if (req.file) {
@@ -48,14 +41,12 @@ exports.createPost = async (req, res) => {
 
 exports.userPost = async (req, res) => {
   const userId = req.params.userId;
-
   try {
-    const posts = await Post.find({ userId }).populate("userId");
+    const posts = await Post.find({ userId }).populate("userId")  .sort({ createdAt: -1 });
     if (!posts || posts.length === 0) {
       return res.status(404).json({ error: "Posts not found for the user" });
     }
-
-    res.json(posts);
+  res.json(posts);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error while fetching posts" });
@@ -67,7 +58,6 @@ exports.deletePost = async (req, res) => {
   const postt = await Post.findById(postId);
   try {
     const post = await Post.findByIdAndDelete(postId);
-
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
     }
@@ -103,26 +93,15 @@ exports.editPost = async (req, res) => {
 }
 
 exports.updatePost = async (req, res) => {
-  const { title, description } = req.body;
+  const { title } = req.body;
   const postId = req.params.postId;
   const image = req.file;
-
-  // if (!title || !description) {
-  //   return res
-  //     .status(400)
-  //     .json({ error: "Title and description are required fields" });
-  // }
-
-  try {
+    try {
     const post = await Post.findById(postId);
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
     }
-
-    // Update title and description
     post.title = title;
-    // post.description = description;
-
     if (image) {
       post.image = {
         originalname: image.originalname,
@@ -130,7 +109,6 @@ exports.updatePost = async (req, res) => {
         filename: image.filename,
       };
     }
-
     await post.save();
     return res.json({ message: "Post updated successfully!" });
   } catch (err) {
@@ -148,23 +126,23 @@ exports.Allposts = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    const followingUserIds = user.following;
-
+    const followingUserIds = user.following.map(id => id.toString()); // Ensure IDs are strings
+    const userAndFollowingIds = [...followingUserIds, userId.toString()];
     const posts = await Post.find({
-      userId: { $in: followingUserIds },
+      userId: { $in: userAndFollowingIds },
     })
+    .sort({ createdAt: -1 })
       .skip((page - 1) * Number(limit)) // Ensure limit is a number
       .limit(Number(limit)) // Ensure limit is a number
       .populate("userId");
 
     const totalPosts = await Post.countDocuments({
-      userId: { $in: followingUserIds },
+      userId: { $in: userAndFollowingIds },
     });
 
     const hasMore = totalPosts > page * Number(limit);
-    console.log("totalPosts:",totalPosts,"hasMore:",hasMore,"page:",page,"posts:",posts.length)
-    res.json({ posts, hasMore ,page});
+    console.log("totalPosts:", totalPosts, "hasMore:", hasMore, "page:", page, "posts:", posts.length);
+    res.json({ posts, hasMore, page });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error while fetching posts" });

@@ -6,7 +6,7 @@ const server = http.createServer(app);
 const io = require("socket.io")(server, {
   cors: {
     origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST","PUT","DELETE"],
     credentials: true,
     pingTimeout: 60000,
   },
@@ -113,6 +113,11 @@ socket.on("addUser", (userId) => {
     console.log(`Video call started from ${from.id} to ${to}`);
     io.to(to).emit('incomingVideoCall', { roomID, from });
 });
+socket.on('endCall', ({ roomID }) => {
+  console.log(`Video call ended `);
+  socket.to(roomID).emit('endCall');
+});
+
   socket.on("disconnect", () => {
     console.log("user disconnnted!");
     removeUser(socket.id);

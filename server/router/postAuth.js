@@ -80,5 +80,6 @@ postrouter.post(
 );
 
 postrouter.get("/user/:userId", authenticate, postController.User);
-
+postrouter.put("/user/api/comment",authenticate,postController.createComment)
+postrouter.put("/user/api/comment/:commentId/:postId",authenticate,postController.replyComment)
 module.exports = postrouter;

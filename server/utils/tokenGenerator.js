@@ -79,8 +79,7 @@ function generateToken04(appId, userId, secret, effectiveTimeInSeconds, payload)
         expire: createTime + effectiveTimeInSeconds,
         payload: payload || ''
     };
-    var plaintText = JSON.stringify(tokenInfo); // Convert tokenInfo object to JSON string
-    console.log('plain text: ', plaintText);
+    var plaintText = JSON.stringify(tokenInfo);
     var iv = makeRandomIv(); // Generate random 16 character string for iv
     console.log('iv', iv);
     var encryptBuf = aesEncrypt(plaintText, secret, iv); // Encrypt JSON string using AES encryption function

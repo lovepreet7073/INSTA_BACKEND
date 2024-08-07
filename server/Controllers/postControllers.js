@@ -1,6 +1,7 @@
 require("../db/connect");
 const User = require("../models/userSchema");
 const Post = require("../models/PostSchema");
+const mongoose = require("mongoose");
 
 exports.createPost = async (req, res) => {
   const { title } = req.body;
@@ -138,15 +139,38 @@ exports.Allposts = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * Number(limit)) // Ensure limit is a number
       .limit(Number(limit)) // Ensure limit is a number
-      .populate("userId").populate('comments.postedBy', '_id name profileImage')
-      .populate('comments.replies.postedBy', '_id name profileImage')
+      .populate('userId')  // Populates the user who created the post
+      .populate({
+        path: 'comments',
+        populate: [
+          {
+            path: 'postedBy',  // Populates the user who posted the comment
+            model: 'User'
+          },
+          {
+            path: 'replies',
+            populate: [
+              {
+                path: 'postedBy',  // Populates the user who replied to the comment
+                model: 'User'
+              },
+              {
+                path: 'replies',
+                populate: {
+                  path: 'postedBy',  // Populates the user who replied to a reply
+                  model: 'User'
+                }
+              }
+            ]
+          }
+        ]
+      })
 
     const totalPosts = await Post.countDocuments({
       userId: { $in: userAndFollowingIds },
     });
 
     const hasMore = totalPosts > page * Number(limit);
-    console.log("totalPosts:", totalPosts, "hasMore:", hasMore, "page:", page, "posts:", posts.length);
     res.json({ posts, hasMore, page });
   } catch (error) {
     console.error(error);
@@ -223,9 +247,32 @@ exports.createComment = async (req, res) => {
         new: true
       }
     )
-      .populate("comments.postedBy", "_id name profileImage")
-      .populate("userId", "_id name profileImage")
-      .populate('comments.replies.postedBy', '_id name profileImage')
+      .populate('userId')  // Populates the user who created the post
+      .populate({
+        path: 'comments',
+        populate: [
+          {
+            path: 'postedBy',  // Populates the user who posted the comment
+            model: 'User'
+          },
+          {
+            path: 'replies',
+            populate: [
+              {
+                path: 'postedBy',  // Populates the user who replied to the comment
+                model: 'User'
+              },
+              {
+                path: 'replies',
+                populate: {
+                  path: 'postedBy',  // Populates the user who replied to a reply
+                  model: 'User'
+                }
+              }
+            ]
+          }
+        ]
+      })
     if (!result) {
       return res.status(404).json({ error: 'Post not found' });
     }
@@ -236,11 +283,13 @@ exports.createComment = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
 exports.replyComment = async (req, res) => {
   const { postId, commentId } = req.params;
   const { reply } = req.body;
   const userId = req.user._id;
-
+  console.log(commentId, "id")
   try {
     const post = await Post.findById(postId);
     if (!post) {
@@ -251,23 +300,133 @@ exports.replyComment = async (req, res) => {
     if (!comment) {
       return res.status(404).json({ message: "Comment not found" });
     }
-
+console.log(reply,'replyComment');
     comment.replies.push({
       reply,
-      postedBy: userId
+      postedBy: userId,
+
     },
     )
     await post.save();
     const updatedPost = await Post.findById(postId)
-      .populate('comments.replies.postedBy', '_id name profileImage')
-      .populate('userId', '_id name profileImage')
-      .populate("comments.postedBy", "_id name profileImage")
+
+      .populate('userId')  // Populates the user who created the post
+      .populate({
+        path: 'comments',
+        populate: [
+          {
+            path: 'postedBy',  // Populates the user who posted the comment
+            model: 'User'
+          },
+          {
+            path: 'replies',
+            populate: [
+              {
+                path: 'postedBy',  // Populates the user who replied to the comment
+                model: 'User'
+              },
+              {
+                path: 'replies',
+                populate: {
+                  path: 'postedBy',  // Populates the user who replied to a reply
+                  model: 'User'
+                }
+              }
+            ]
+          }
+        ]
+      })
+
     res.status(201).json(updatedPost);
 
   } catch (error) {
 
-    console.log(error, 'test')
 
     res.status(500).json({ message: "Server error", error });
   }
 }
+
+
+exports.replyonreply = async (req, res) => {
+  const { postId, commentId } = req.params;
+  const { replytext, parentReplyId } = req.body;
+  const userId = req.user._id;
+  try {
+    
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const comment = post.comments.id(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+console.log(replytext,"text")
+    
+    // Finding the parent reply
+    let parentReply = null;
+    const findParentReply = (replies, parentId) => {
+      for (const reply of replies) {
+        if (reply._id.toString() === parentId) {
+          return reply;
+        }
+        if (reply.replies && reply.replies.length > 0) {
+          const found = findParentReply(reply.replies, parentId);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    parentReply = findParentReply(comment.replies, parentReplyId);
+    console.log(`Parent reply: ${JSON.stringify(parentReply)}, parentReplyId: ${parentReplyId}`);
+
+    if (!parentReply) {
+      return res.status(404).json({ message: 'Parent reply not found' });
+    }
+    const newReplyId = new mongoose.Types.ObjectId(); // Generate a new _id
+    const newReply = {
+      _id: newReplyId,
+      reply: replytext,
+      postedBy: userId,
+  
+    };
+
+    parentReply.replies.push(newReply);
+  console.log(newReply,"new")
+  
+    await post.save();
+    const updatedPost = await Post.findById(postId)
+      .populate('userId')  // Populates the user who created the post
+      .populate({
+        path: 'comments',
+        populate: [
+          {
+            path: 'postedBy',  // Populates the user who posted the comment
+            model: 'User'
+          },
+          {
+            path: 'replies',
+            populate: [
+              {
+                path: 'postedBy',  // Populates the user who replied to the comment
+                model: 'User'
+              },
+              {
+                path: 'replies',
+                populate: {
+                  path: 'postedBy',  // Populates the user who replied to a reply
+                  model: 'User'
+                }
+              }
+            ]
+          }
+        ]
+      })
+    res.status(201).json(updatedPost);
+  } catch (error) {
+    console.error(error); // Improved error logging
+    res.status(500).json({ message: "Server error", error });
+  }
+};

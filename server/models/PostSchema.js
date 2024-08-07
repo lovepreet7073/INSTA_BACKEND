@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 
+
 const replySchema = new mongoose.Schema({
   reply: { type: String, required: true },
   postedBy: {
@@ -14,7 +15,8 @@ const replySchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  replies: [{ type: mongoose.Schema.Types.Mixed }]
 });
 
 const commentSchema = new mongoose.Schema({
@@ -85,5 +87,5 @@ const postSchema = new mongoose.Schema({
 });
 
 const Post = mongoose.model("Post", postSchema);
-
+const Reply = mongoose.model("Reply", replySchema);
 module.exports = Post;

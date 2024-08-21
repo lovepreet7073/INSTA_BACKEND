@@ -6,7 +6,7 @@ const server = http.createServer(app);
 const Routes  = require('../server/router/index')
 const io = require("socket.io")(server, {
   cors: {
-    origin:process.env.CORS_ORIGIN_SERVER,
+      origin: "http://localhost:3000",
     methods: ["GET", "POST","PUT","DELETE"],
     credentials: true,
     pingTimeout: 60000,

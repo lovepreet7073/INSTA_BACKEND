@@ -1,60 +1,48 @@
 const express = require("express");
 const router = express.Router();
-require("../db/connect");
 const authenticate = require("../middleware/authenticate");
 const authcontroller = require("../Controllers/authControllers")
+const upload = require("../middleware/multerMiddleware");
+const constants = require("../constants/apiUrls")
 //register page logic
-router.post("/register", authcontroller.register);
+router.post(  constants.REGISTER_URL, authcontroller.register);
 
-router.post("/login", authcontroller.login);
+router.post(constants.LOGIN_URL, authcontroller.login);
 
-router.get("/user", authenticate, (req, res) => {
+router.get(constants.USER_URL, authenticate, (req, res) => {
   res.send(req.user);
 });
 
-//update logic
 
-const multer = require("multer");
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "./images");
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname);
-  },
-});
-const upload = multer({ storage: storage });
 
 router.post(
-  "/user/update/:userId",
+  constants.UPDATE_USER_URL,
   upload.single("profileImage"),
   authenticate,
   authcontroller.updateUser
 );
 
-router.get("/logout", (req, res) => {
+router.get(constants.LOGOUT_URL, (req, res) => {
   res.status(200).send("user logout");
 });
 
 //follow logic
-router.put("/user/follow/:userId", authenticate, authcontroller.userFollow);
+router.put(constants.FOLLOW_USER_URL, authenticate, authcontroller.userFollow);
 
 //unfolow logic-->
 
-router.put("/user/unfollow/:userId", authenticate, authcontroller.userUnfollow);
-router.get("/user/allusers", authenticate, authcontroller.allUsers);
+router.put(constants.UNFOLLOW_USER_URL, authenticate, authcontroller.userUnfollow);
+router.get(constants.ALL_USERS_URL, authenticate, authcontroller.allUsers);
 router.post(
-  "/user/password/:userId",
+  constants.UPDATE_PASSWORD_URL,
   authenticate,
   authcontroller.updatePassword
 );
-router.post("/forgetpassword",authcontroller.forgetPassword)
-    router.post("/resetpassword/:token",authcontroller.resetPassword)
-module.exports = router;
+router.post(constants.FORGET_PASSWORD_URL, authcontroller.forgetPassword)
+router.post(constants.RESET_PASSWORD_URL, authcontroller.resetPassword)
 
-router.post("/googleLogin",authcontroller.googleLogin)
-router.get("/verifyaccount/:id/:token",authcontroller.verifyAccount)
-router.post("/resend-confirmation/:id",authcontroller.resendConfirmation)
-router.get("/user/api/generate-token/:userId",authcontroller.generateToken)
+
+router.post(constants.GOOGLE_LOGIN_URL, authcontroller.googleLogin)
+router.get(constants.VERIFY_ACCOUNT_URL, authcontroller.verifyAccount)
+router.post(constants.RESEND_CONFIRMATION_URL, authcontroller.resendConfirmation)
+module.exports = router;

@@ -1,8 +1,7 @@
-require("../db/connect");
 const User = require("../models/userSchema");
-const Post = require("../models/PostSchema");
+const Post = require("../models/postSchema");
 const mongoose = require("mongoose");
-
+const Story = require("../models/storySchema")
 exports.createPost = async (req, res) => {
   const { title } = req.body;
   const userId = req.params.userId;
@@ -15,11 +14,7 @@ exports.createPost = async (req, res) => {
     const newPostData = {
       title,
 
-      image: {
-        filename: req.file.filename,
-        originalname: req.file.originalname,
-        path: req.file.path,
-      },
+      image:req.file.filename,
       userId,
     };
 
@@ -41,12 +36,16 @@ exports.createPost = async (req, res) => {
 }
 
 exports.userPost = async (req, res) => {
-
   try {
     const { userId } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    const posts = await Post.find({ userId }).populate("userId").skip((page - 1) * Number(limit)) // Ensure limit is a number
-      .limit(Number(limit)) //  
+    
+    const posts = await Post.find({ userId })
+      .populate("userId")
+      .sort({ createdAt: -1 }) // Sort posts by the latest first
+      .skip((page - 1) * Number(limit)) 
+      .limit(Number(limit));
+
     if (!posts || posts.length === 0) {
       return res.status(404).json({ error: "Posts not found for the user" });
     }
@@ -57,6 +56,7 @@ exports.userPost = async (req, res) => {
     res.status(500).json({ error: "Server error while fetching posts" });
   }
 }
+
 
 exports.deletePost = async (req, res) => {
   const postId = req.params.postId;
@@ -108,11 +108,7 @@ exports.updatePost = async (req, res) => {
     }
     post.title = title;
     if (image) {
-      post.image = {
-        originalname: image.originalname,
-        path: image.path,
-        filename: image.filename,
-      };
+      post.image = image.filename;
     }
     await post.save();
     return res.json({ message: "Post updated successfully!" });
@@ -300,7 +296,7 @@ exports.replyComment = async (req, res) => {
     if (!comment) {
       return res.status(404).json({ message: "Comment not found" });
     }
-console.log(reply,'replyComment');
+    console.log(reply, 'replyComment');
     comment.replies.push({
       reply,
       postedBy: userId,
@@ -352,7 +348,7 @@ exports.replyonreply = async (req, res) => {
   const { replytext, parentReplyId } = req.body;
   const userId = req.user._id;
   try {
-    
+
     const post = await Post.findById(postId);
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
@@ -362,8 +358,8 @@ exports.replyonreply = async (req, res) => {
     if (!comment) {
       return res.status(404).json({ message: "Comment not found" });
     }
-console.log(replytext,"text")
-    
+    console.log(replytext, "text")
+
     // Finding the parent reply
     let parentReply = null;
     const findParentReply = (replies, parentId) => {
@@ -386,16 +382,14 @@ console.log(replytext,"text")
       return res.status(404).json({ message: 'Parent reply not found' });
     }
     const newReplyId = new mongoose.Types.ObjectId(); // Generate a new _id
-    const newReply = {
+    parentReply.replies.push({
       _id: newReplyId,
       reply: replytext,
       postedBy: userId,
-  
-    };
-
-    parentReply.replies.push(newReply);
-  console.log(newReply,"new")
-  
+      replies: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
     await post.save();
     const updatedPost = await Post.findById(postId)
       .populate('userId')  // Populates the user who created the post
@@ -428,5 +422,94 @@ console.log(replytext,"text")
   } catch (error) {
     console.error(error); // Improved error logging
     res.status(500).json({ message: "Server error", error });
+  }
+};
+
+exports.addStory = async (req, res) => {
+  try {
+    const story = new Story({
+      image: req.file.filename,
+       
+      postedBy: req.user._id, // Store the user ID
+    });
+
+    const savedStory = await story.save();
+
+
+    const populatedStory = await Story.findById(savedStory._id).populate('postedBy', 'name profileImage');
+
+    res.status(201).json(populatedStory);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error });
+  }
+};
+
+exports.getStory = async (req, res) => {
+  try {
+    const userId = req.user._id; // Get the logged-in user ID
+
+    // Fetch the logged-in user's following list
+    const user = await User.findById(userId).populate('following', '_id');
+
+    const followingIds = user.following.map(user => user._id);
+
+    // Fetch stories from followed users
+    const allStories = await Story.find({ postedBy: { $in: followingIds } })
+      .populate('postedBy', 'name profileImage').populate({
+        path: 'viewers',
+        select: 'name profileImage',
+      });
+
+    // Separate logged-in user's stories from others
+    const userStories = allStories.filter(story => story.postedBy._id.toString() === userId.toString());
+    const otherStories = allStories.filter(story => story.postedBy._id.toString() !== userId.toString());
+
+    // Group stories by user
+    const groupedStories = [...userStories, ...otherStories].reduce((acc, story) => {
+      const userId = story.postedBy._id.toString();
+      if (!acc[userId]) {
+        acc[userId] = {
+          user: story.postedBy,
+          stories: []
+        };
+      }
+      acc[userId].stories.push(story);
+      return acc;
+    }, {});
+
+    // Format the stories
+    const formattedStories = Object.values(groupedStories);
+
+    res.status(200).json({
+      allStories: formattedStories
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error', error });
+  }
+};
+
+exports.updateViewers = async (req, res) => {
+  try {
+    const { storyId } = req.params;
+    const userId = req.user._id;
+
+    const story = await Story.findById(storyId).populate('postedBy', '_id');
+
+    if (!story) {
+      return res.status(404).json({ message: 'Story not found.' });
+    }
+    if (story.postedBy._id.toString() !== userId.toString() && !story.viewers.includes(userId)) {
+      story.viewers.push(userId);
+      await story.save();
+    }
+    // Populate the viewer details (name and profileImage)
+    const populatedStory = await Story.findById(storyId).populate({
+      path: 'viewers',
+      select: 'name profileImage', // Select only the fields you need
+    });
+
+    res.status(200).json(populatedStory);
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating viewers.', error: err });
   }
 };

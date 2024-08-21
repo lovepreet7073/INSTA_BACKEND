@@ -16,7 +16,7 @@ const replySchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  replies: [{ type: mongoose.Schema.Types.Mixed }]
+  replies: [this]
 });
 
 const commentSchema = new mongoose.Schema({
@@ -43,18 +43,7 @@ const postSchema = new mongoose.Schema({
     // required: true
   },
   image: {
-    filename: {
-      type: String,
-      required: true
-    },
-    originalname: {
-      type: String,
-      required: true
-    },
-    path: {
-      type: String,
-      required: true
-    }
+    type: String
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,

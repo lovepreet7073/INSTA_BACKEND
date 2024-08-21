@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const DB = "mongodb+srv://kodion:kodion%40123@cluster0.2tdayf3.mongodb.net/mernstack";
+const DB =process.env.MONGODB_URI ;
 
 mongoose
   .connect(DB, {

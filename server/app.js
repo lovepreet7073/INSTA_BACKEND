@@ -3,9 +3,10 @@ const app = express();
 const cors = require("cors");
 const http = require("http");
 const server = http.createServer(app);
+const Routes  = require('../server/router/index')
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin:process.env.CORS_ORIGIN_SERVER,
     methods: ["GET", "POST","PUT","DELETE"],
     credentials: true,
     pingTimeout: 60000,
@@ -14,18 +15,17 @@ const io = require("socket.io")(server, {
 
 const dotenv = require("dotenv");
 const path = require("path");
-const port = 5000;
 
 dotenv.config({ path: "./.env" });
 
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN_CLIENT,
   methods: ['GET', 'POST', 'PUT','DELETE'],
   credentials: true
 }));
 
-server.listen(port, () => {
-  console.log(`Server started at port: ${port}`);
+server.listen( process.env.PORT, () => {
+  console.log(`Server started at port: ${process.env.PORT}`);
 });
 
 let users = [];
@@ -129,66 +129,10 @@ socket.on('endCall', ({ roomID }) => {
 require("./db/connect");
 app.use(express.json());
 app.use("/images", express.static(path.join(__dirname, "images")));
-app.use(require("./router/auth"));
-app.use(require("./router/postAuth"));
-app.use(require("./router/message"));
 
-app.get("/login", (req, res) => {
-  res.send(`Login page`);
-});
+const routes = new Routes(app);
+routes.routesConfig();
 
-app.get("/logout", (req, res) => {
-  res.send(`Logout page`);
-});
 
-app.get("/register", (req, res) => {
-  res.send(`Register page`);
-});
-app.get("/forgetpassword", (req, res) => {
-  res.send(`forgetpassword page`);
-});
 
-app.get("/user/update/:userId", (req, res) => {
-  res.send("Update user details");
-});
 
-app.get("/contact", (req, res) => {
-  res.cookie("test", "formtoken");
-  res.send(`Contact page`);
-});
-
-app.get("/user/createpost/:userId", (req, res) => {
-  res.send(`Post page`);
-});
-
-app.get("/user/posts/:userId", (req, res) => {
-  res.send(`User posts page`);
-});
-
-app.get("/user/deletepost/:postId", (req, res) => {
-  res.send("Delete post");
-});
-
-app.get("/user/updatepost/:postId", (req, res) => {
-  res.send("Update post");
-});
-
-app.get("/user/editpost/:postId", (req, res) => {
-  res.send("Edit post");
-});
-
-app.get("/user/allposts", (req, res) => {
-  res.send("All posts");
-});
-
-app.get("/user/likepost/:postId/:userId", (req, res) => {
-  res.send("Like post");
-});
-
-app.get("/user/send/:id", (req, res) => {
-  res.send("Message page");
-});
-
-app.get("/user/receive/:id", (req, res) => {
-  res.send("Receive message page");
-});

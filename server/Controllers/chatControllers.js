@@ -1,6 +1,6 @@
 const User = require("../models/userSchema");
 const Chat = require("../models/chatSchema");
-const Message = require("../models/MessageSchema");
+const Message = require("../models/messageSchema");
 const path = require('path');
 const fs = require('fs');
 
@@ -28,6 +28,11 @@ exports.createChat = async (req, res) => {
   try {
     const existingChat = await Chat.findOne({
       users: { $all: [req.user._id, userId] }
+    }).populate({
+      path: 'users',
+      select: 'name profileImage'
+    }).populate({
+      path: 'latestMessage'
     });
 
     if (existingChat) {
@@ -38,10 +43,14 @@ exports.createChat = async (req, res) => {
         users: [req.user._id, userId],
       };
       const createdChat = await Chat.create(chatData);
-      const fullChat = await Chat.findOne({ _id: createdChat._id }).populate(
-        "users",
-        "-password"
-      );
+      const fullChat = await Chat.findOne({ _id: createdChat._id })
+        .populate({
+          path: 'users',
+          select: 'name profileImage'
+        }).populate({
+          path: 'latestMessage'
+        });
+      console.log(fullChat, "fullchat");
       return res.status(200).send(fullChat);
     }
   } catch (error) {
@@ -49,6 +58,7 @@ exports.createChat = async (req, res) => {
     return res.status(500).send("Server Error");
   }
 }
+
 
 exports.chatData = async (req, res) => {
   try {

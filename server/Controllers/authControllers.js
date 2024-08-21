@@ -3,7 +3,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const secretKey = process.env.SECRET_KEY;
 const sendMail = require("../utils/mailUtil");
-const {generateToken04} = require("../utils/tokenGenerator")
 const Token = require("../models/tokenschema");
 
 exports.register = async (req, res) => {
@@ -304,7 +303,23 @@ exports.allUsers = async (req, res) => {
     res.status(500).json({ error: "Server error while fetching user data" });
   }
 };
+exports.userPost = async (req, res) => {
 
+  try {
+    const { userId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const posts = await Post.find({ userId }).populate("userId").skip((page - 1) * Number(limit)) // Ensure limit is a number
+      .limit(Number(limit)) //  
+    if (!posts || posts.length === 0) {
+      return res.status(404).json({ error: "Posts not found for the user" });
+    }
+
+    res.json(posts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error while fetching posts" });
+  }
+}
 exports.updatePassword = async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -447,20 +462,4 @@ exports.googleLogin = async (req, res) => {
 };
 
 
-exports.generateToken = async(req,res,next)=>{
-try {
-  const appId = parseInt(process.env.APP_ID);
-  const serverSecret = process.env.SECRET_SERVER_ID;
-  const userId = req.params.userId;
-  const effectiveTime = 3600;
-  const payload = "";
-  if(appId && serverSecret && userId){
-    const token = generateToken04(appId,userId,serverSecret,effectiveTime,payload);
-    res.status(200).json({token});
-  } else {
-    return res.status(400).send("User id,app id and server secret is required!");
-  }
-} catch (error) {
-  next(error);
-}
-}
+
